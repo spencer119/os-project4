@@ -232,45 +232,33 @@ void Simulation::handle_dispatcher_invoked(const std::shared_ptr<Event> event) {
 //     return this->system_stats;
 // }
 SystemStats Simulation::calculate_statistics() {
-    /*
-        TODO: Calculate the following system statistics:
-            - thread_counts[4]
-            - avg_thread_response_times[4]
-            - avg_thread_turnaround_times[4]
-            - total_service_time
-            - total_io_time
-            - total_idle_time
-            - cpu_utilization
-            - cpu_efficiency
-    */
-
     for (auto& pair : processes) {
         auto& proc = pair.second;
-        for (auto& thread : proc->threads) {
+        for (auto& thread : proc->threads) {  // loop through each thread of each process
             size_t pindex = static_cast<size_t>(thread->priority);
             system_stats.thread_counts[pindex]++;
 
-            // Response and turnaround times
+            // Response and turnaround
             system_stats.avg_thread_response_times[pindex] += thread->response_time();
             system_stats.avg_thread_turnaround_times[pindex] += thread->turnaround_time();
 
-            // Total service and I/O times
+            // total service and io time
             system_stats.total_service_time += thread->service_time;
             system_stats.total_io_time += thread->io_time;
         }
     }
-    // Calculate average response and turnaround times per priority
+    // Calculate averages res time and turnaround for each priority
     for (int i = 0; i < 4; i++) {
-        if (system_stats.thread_counts[i] > 0) {  // To avoid division by zero
+        if (system_stats.thread_counts[i] > 0) {
             system_stats.avg_thread_response_times[i] /= system_stats.thread_counts[i];
             system_stats.avg_thread_turnaround_times[i] /= system_stats.thread_counts[i];
         }
     }
 
-    // Total idle time is the total simulation time minus the sum of service time and dispatch time
+    // Total idle time
     system_stats.total_idle_time = system_stats.total_time - system_stats.total_service_time - system_stats.dispatch_time;
 
-    // Calculate CPU Utilization and Efficiency
+    //  utilization and efficiency
     system_stats.cpu_utilization = (system_stats.total_time > 0) ? 100.0 * (system_stats.total_time - system_stats.total_idle_time) / system_stats.total_time : 0;
 
     system_stats.cpu_efficiency = (system_stats.total_time > 0) ? 100.0 * system_stats.total_service_time / system_stats.total_time : 0;

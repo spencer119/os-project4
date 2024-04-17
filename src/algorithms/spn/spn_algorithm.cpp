@@ -33,7 +33,7 @@ std::shared_ptr<SchedulingDecision> SPNScheduler::get_next_thread() {
 void SPNScheduler::add_to_ready_queue(std::shared_ptr<Thread> thread) {
     if (!thread->bursts.empty()) {
         int next_burst_length = thread->bursts.front()->length;
-        ready_queue.push(next_burst_length, thread);
+        ready_queue.push(next_burst_length, thread);  // Add thread to the queue with the bust length as the priority
     }
 }
 

@@ -19,7 +19,7 @@ FCFSScheduler::FCFSScheduler(int slice) {
 std::shared_ptr<SchedulingDecision> FCFSScheduler::get_next_thread() {
     auto decision = std::make_shared<SchedulingDecision>();
 
-    if (ready_queue.empty()) {
+    if (ready_queue.empty()) {  // No threads in queue
         decision->thread = nullptr;
         decision->explanation = "No threads available for scheduling.";
     } else {

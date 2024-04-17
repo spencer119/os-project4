@@ -22,7 +22,6 @@ class SPNScheduler : public Scheduler {
     //  Member variables
     //==================================================
 
-    // TODO: Add any member variables you may need.
     Stable_Priority_Queue<std::shared_ptr<Thread>> ready_queue;
     //==================================================
     //  Member functions
