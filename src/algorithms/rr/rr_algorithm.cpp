@@ -10,20 +10,34 @@
     Here is where you should define the logic for the round robin algorithm.
 */
 
-RRScheduler::RRScheduler(int slice) {    
-    //TODO Implement me
+RRScheduler::RRScheduler(int slice) {
+    if (slice <= 0) {
+        throw("RR requires a slice greater than 0");
+    }
+    this->time_slice = slice;
+    this->ready_queue = std::deque<std::shared_ptr<Thread>>();
 }
 
 std::shared_ptr<SchedulingDecision> RRScheduler::get_next_thread() {
-    //TODO Implement me!
-    return nullptr;
+    auto decision = std::make_shared<SchedulingDecision>();
+    decision->time_slice = -1;
+    if (ready_queue.empty()) {
+        decision->thread = nullptr;
+        decision->explanation = "No threads available for scheduling.";
+    } else {
+        std::shared_ptr<Thread> next = ready_queue.front();
+        ready_queue.pop_front();
+        decision->explanation = fmt::format("Selected from {} threads. Will run for at most {} ticks", ready_queue.size() + 1, time_slice);
+        decision->thread = next;
+        decision->time_slice = time_slice;
+    }
+    return decision;
 }
 
 void RRScheduler::add_to_ready_queue(std::shared_ptr<Thread> thread) {
-    //TODO Implement Me
+    ready_queue.push_back(thread);
 }
 
 size_t RRScheduler::size() const {
-    //TODO: Implement me!
-    return 0;
+    return ready_queue.size();
 }

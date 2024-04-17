@@ -1,9 +1,11 @@
 #ifndef RR_ALGORITHM_HPP
 #define RR_ALGORITHM_HPP
 
+#include <deque>
 #include <memory>
 #include <queue>
 #include <stdexcept>
+
 #include "algorithms/scheduling_algorithm.hpp"
 
 /*
@@ -17,13 +19,13 @@
 */
 
 class RRScheduler : public Scheduler {
-public:
-
+   public:
     //==================================================
     //  Member variables
     //==================================================
 
     // TODO: Add any member variables you may need
+    std::deque<std::shared_ptr<Thread>> ready_queue;
 
     //==================================================
     //  Member functions
