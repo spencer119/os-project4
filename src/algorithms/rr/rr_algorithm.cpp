@@ -11,23 +11,25 @@
 */
 
 RRScheduler::RRScheduler(int slice) {
-    if (slice <= 0) {
-        throw("RR requires a slice greater than 0");
+    if (slice == -1) {
+        time_slice = 3;
+        // throw("RR requires a slice greater than 0");
+    } else {
+        this->time_slice = slice;
     }
-    this->time_slice = slice;
     this->ready_queue = std::deque<std::shared_ptr<Thread>>();
 }
 
 std::shared_ptr<SchedulingDecision> RRScheduler::get_next_thread() {
     auto decision = std::make_shared<SchedulingDecision>();
-    decision->time_slice = -1;
     if (ready_queue.empty()) {
+        decision->time_slice = -1;
         decision->thread = nullptr;
         decision->explanation = "No threads available for scheduling.";
     } else {
         std::shared_ptr<Thread> next = ready_queue.front();
         ready_queue.pop_front();
-        decision->explanation = fmt::format("Selected from {} threads. Will run for at most {} ticks", ready_queue.size() + 1, time_slice);
+        decision->explanation = fmt::format("Selected from {} threads. Will run for at most {} ticks.", ready_queue.size() + 1, time_slice);
         decision->thread = next;
         decision->time_slice = time_slice;
     }
