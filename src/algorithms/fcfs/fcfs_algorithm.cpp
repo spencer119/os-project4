@@ -17,7 +17,6 @@ FCFSScheduler::FCFSScheduler(int slice) {
 }
 
 std::shared_ptr<SchedulingDecision> FCFSScheduler::get_next_thread() {
-    // TODO: implement me!
     auto decision = std::make_shared<SchedulingDecision>();
 
     if (ready_queue.empty()) {
