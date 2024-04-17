@@ -22,10 +22,10 @@ std::shared_ptr<SchedulingDecision> SPNScheduler::get_next_thread() {
 }
 
 void SPNScheduler::add_to_ready_queue(std::shared_ptr<Thread> thread) {
-    //TODO: Implement me!
+    // TODO: Implement me!
 }
 
 size_t SPNScheduler::size() const {
-    //TODo: Implement me
+    // TODo: Implement me
     return 0;
 }
