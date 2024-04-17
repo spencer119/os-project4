@@ -22,10 +22,11 @@ std::shared_ptr<SchedulingDecision> SPNScheduler::get_next_thread() {
     if (ready_queue.empty()) {
         decision->thread = nullptr;
         decision->explanation = "No threads available for scheduling.";
+    } else {
+        decision->thread = ready_queue.top();
+        decision->explanation = fmt::format("Selected from {} threads. Will run to completion of burst.", ready_queue.size());
+        ready_queue.pop();
     }
-    decision->thread = ready_queue.top();
-    decision->explanation = fmt::format("Selected from {} threads. Will run to completion of burst.", ready_queue.size() + 1 + 1);
-    ready_queue.pop();
     return decision;
 }
 
