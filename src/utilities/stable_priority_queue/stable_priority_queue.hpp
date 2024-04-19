@@ -10,29 +10,29 @@
 #ifndef STABLE_PRIORITY_QUEUE
 #define STABLE_PRIORITY_QUEUE
 
+#include <exception>
+#include <map>
 #include <queue>
 #include <vector>
-#include <map>
-#include <exception>
 
 // Priority Queue that mainains FIFO ordering for elements with the same priority
 // Everything is defined in-line since this is templated.
 template <class T>
 class Stable_Priority_Queue {
- private:
+   private:
     std::map<int, std::queue<T>> mQueues;
     std::priority_queue<int, std::vector<int>, std::greater<int>> mPriorityQueue;
 
- public:
+   public:
     Stable_Priority_Queue() {}
-        
+
     /**
      * Is this queue empty? Equivalent to .size() == 0
      */
     bool empty() const {
         return mPriorityQueue.empty();
     }
-        
+
     /**
      * Returns the number of elements stored
      */
@@ -49,7 +49,7 @@ class Stable_Priority_Queue {
         }
         return mQueues[mPriorityQueue.top()].front();
     }
-        
+
     /**
      * Removes the top element
      */
@@ -60,9 +60,19 @@ class Stable_Priority_Queue {
         }
         mPriorityQueue.pop();
     }
-
     /**
-     * Adds an item into the queue. 
+     * Returns the number of elements in the queue with a specific ProcessPriority enum assigned.
+     */
+    std::map<ProcessPriority, int> count() const {
+        std::map<ProcessPriority, int> countMap;
+        for (const auto& queue : mQueues) {
+            ProcessPriority priority = static_cast<ProcessPriority>(queue.first);
+            countMap[priority] += queue.second.size();
+        }
+        return countMap;
+    }
+    /**
+     * Adds an item into the queue.
      */
     void push(int priority, const T& item) {
         mPriorityQueue.push(priority);
@@ -77,11 +87,11 @@ class Stable_Priority_Queue {
     /**
      * Overload for assignment operator for deep-copying
      */
-    Stable_Priority_Queue<T>& operator=(const Stable_Priority_Queue<T> &other) {
+    Stable_Priority_Queue<T>& operator=(const Stable_Priority_Queue<T>& other) {
         // Guard self assignment
         if (this == &other)
             return *this;
-        
+
         // Use the operator= already defined
         this->mQueues = other.mQueues;
         this->mPriorityQueue = other.mPriorityQueue;
