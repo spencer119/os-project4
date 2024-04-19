@@ -4,6 +4,7 @@
 #include <iostream>
 
 #include "algorithms/fcfs/fcfs_algorithm.hpp"
+#include "algorithms/mlfq/mlfq_algorithm.hpp"
 #include "algorithms/priority/priority_algorithm.hpp"
 #include "algorithms/rr/rr_algorithm.hpp"
 #include "algorithms/spn/spn_algorithm.hpp"
@@ -23,9 +24,9 @@ Simulation::Simulation(FlagOptions flags) {
         this->scheduler = std::make_shared<RRScheduler>(flags.time_slice);
     } else if (flags.scheduler == "PRIORITY") {
         this->scheduler = std::make_shared<PRIORITYScheduler>(flags.time_slice);
-    }
-
-    else {
+    } else if (flags.scheduler == "MLFQ") {
+        this->scheduler = std::make_shared<MLFQScheduler>();
+    } else {
         throw("No scheduler found for " + flags.scheduler);
     }
     this->flags = flags;
