@@ -10,7 +10,8 @@ Since this is a large project, you are given a **LOT** of starter code, which im
 2) Project Requirements
 =======================
 You will create a program called cpu-sim, which simulates a variety of possibly multi-threaded processes using a specified scheduling algorithm.
-
+Your job is to fix the implementation of the Multi-Level Feedback Queue (MLFQ) algorithm so that it works as expected. The current code fails tests.
+Using these instructions and the GitHub repo code, your job is to fix the MLFQ algorithm so that it works as expected and as described in the instructions.
 3.1) Simulation Information
 ---------------------------
 (This is implemented for you in the starter code)
@@ -152,3 +153,8 @@ You need to calculate the following performance metrics:
 
 See the SystemStatistics class and Simulation::calculate_statistics() for more information.
 </instructions>
+After reading the instructions carefully to understand the C++ project requirements, your job is to fix the MLFQ algorithm in the code so it works as expected.
+You can find the code in the GitHub repo https://github.com/spencer119/os-project4
+All the relevant code files are in the src/ directory of the repo. In addition to files for MLFQ, you need to read other classes. Read process.hpp thread.hpp thread.cpp enums.hpp stable_priority_queue.hpp and any others
+You HAVE to read stable_priority_queue.hpp since you are required to use that Stable_Priority_Queue instead of the STL one
+How do I fix the MLFQ scheduler algorithm?
