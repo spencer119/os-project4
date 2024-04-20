@@ -14,7 +14,7 @@ MLFQScheduler::MLFQScheduler(int slice) {
     if (slice != -1) {
         throw("MLFQ does NOT take a customizable time slice");
     }
-    queues = std::vector<Stable_Priority_Queue<std::shared_ptr<Thread>>>(n);
+    queues.resize(n, Stable_Priority_Queue<std::shared_ptr<Thread>>());
 }
 
 std::shared_ptr<SchedulingDecision> MLFQScheduler::get_next_thread() {

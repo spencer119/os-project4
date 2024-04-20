@@ -264,7 +264,6 @@ in class.
 
 5. Multi-Level Feedback Queues (MLFQ)
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-
 ...called Feedback in the slides
 
 * There are ``n`` queues, numbered ``0 ... n-1``
