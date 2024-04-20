@@ -1,9 +1,95 @@
+============================================
+CSCI-442 Project 4: CPU Scheduling Simulator
+============================================
+
+:Due: See Canvas for the due dates of each deliverable.
+
+.. important::
+
+   * You'll want to read this **entire document** before beginning the project.  Please ask any questions you have on the discussion board, but only if this README does not answer your question.
+   * Finally, be sure to start early.  If you wait until a few days before the due date, you are unlikely to finish in time.
+
 1) Introduction
 ===============
- * You'll want to read this **entire document** before beginning the project. 
+
 The goal of this project is to implement many of the scheduling algorithms discussed in class in a discrete-event 
 simulator. Additionally, at the end of execution, your program will calculate and display several
 performance criteria from the simulation.
+
+Since this is a large project, you should note the following:
+
+* You are given a **LOT** of starter code, which implements the simulation for you and nicely sets up what you are required to implement.
+
+    * You will gain familarity with working on a large, existing code base 
+      using modern C++ principles.
+
+    * Part of the project is simply being comfortable with understanding 
+      how to work with large amounts of code you did not write.
+
+    * However, if you prefer reinventing the wheel and overall making your life more difficult, you do *not* have 
+      to use the starter provided. But note that you are adding a good 20+ hours of work to yourself by 
+      not using it, and only limited TA support will be available for this.
+
+* This project is split into two deliverables to discourage procrastination. 
+
+
+2) Project Requirements
+=======================
+
+You will create a program called ``cpu-sim``, which simulates a variety of possibly multi-threaded processes
+using a specified scheduling algorithm. For instance::
+
+        prompt> ./cpu-sim -a FCFS tests/input/input-1 
+
+...would simulate the processes given in ``tests/input/input-1`` using the FCFS scheduling algorithm.
+See **the Appendix** for the full list of options. Note that the starter code parses these for you.
+
+
+.. raw:: pdf
+
+        PageBreak
+
+2.1) Deliverable 1
+------------------
+
+The following is required for deliverable 1:
+
+2.1.1) All functionality present in the starter code
+
+2.1.2) Calculation of the necessary performance metrics
+
+        * You should perform all calculations in ``src/simulation/simulation.cpp`` in ``calculate_statistics()``
+
+2.1.3) Implement the following scheduling algorithms:
+
+        * FCFS
+
+        * SPN
+
+        * RR
+
+2.2) Deliverable 2
+------------------
+
+2.2.1) All functionality required in Deliverable 1
+
+2.2.2) The following additional scheduling algorithms:
+
+        * PRIORITY
+        * MLFQ
+
+.. warning:: 
+          The algorithms required in Deliverable 2 are **MUCH** more complicated than those in Deliverable 1. 
+          Expect to spend more time on Deliverable 2 than Deliverable 1.
+
+
+
+3) Various Project Specifications
+=================================
+
+The following sections contain all the information you need to complete this project. 
+
+- If you have a question about what to do, you can likely find it in this (massive) section
 
 3.1) Simulation Information
 ---------------------------
@@ -81,59 +167,49 @@ The simulation is over a computer with the following attributes:
 
 3.2) Scheduling Algorithms
 --------------------------
-1. Multi-Level Feedback Queues (MLFQ)
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-* There are ``n`` queues, numbered ``0 ... n-1``
-        
-        - For this project, ``n = 10``  
+All scheduling algorithms required are listed below. The algoritms below (FCFS, RR, SPN, PRIORITY, and MLFQ) are described on the slides shown
+in class.
 
-* The priority of a queue is given by: ``n - <queue number>``
+1. First Come, First Served (FCFS)
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-        - This means lower numbered queues have higher priority.
+* Tasks are scheduled in the order they are added to the ready queue
 
-        - E.g., queue 0 has priority ``n``, queue 3 has priority ``n - 3``, and so forth
+* Tasks run until their CPU burst is completed.
 
-* Tasks in lower-numbered (i.e., higher-priority) queues should be scheduled before higher-numbered queues
+...which implies:
 
-        - E.g., *all* tasks in queue 0 should be scheduled before *any* in queue 1, etc.
+1. There is no preemption in this algorithm 
 
-* When a task enters the system, it should be placed in the topmost queue (queue ``0``)
+2. All process priorities are treated as equal.
 
 
+2. Shortest Process Next (SPN)
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-* The time slice a task is given is based off of its queue number.
+* Tasks are scheduled in order (from smallest to largest) of their next CPU burst.
 
-        - Tasks in queue 0 have ``|time slice| = 1``
+        * While this requires future knowledge and thus is impossible to implement in the "RealWorld",
+          in a simulation you know this exact value.
 
-        - Tasks in queue 1 have ``|time slice| = 2``
+* Tasks run until their CPU burst is completed.
 
-        - Tasks in queue 2 have ``|time slice| = 4``
+...which implies:
 
-        - ...
+1. There is no preemption in this algorithm 
 
-        - Tasks in queue ``n`` have ``|time slice| = 2^n``
+2. All process priorities are treated as equal.
 
-                - Note: This is pseudocode. ``^`` in C++ is a bitwise XOR, you want exponentiation. 
+* Priority queues in C++'s STL (Standard Library) are not always accurate. A Priority queue sorts it's entries
+  based on a given priority. If this priority is the same, the order of these matching entries can't be guarenteed. 
+  To solve this we provide a much better implementation for you in 
+  ``src/utilities/stable_priority_queue/``, which is highly recommended for you to use.
+  
 
-* Once a task uses up its time allotment at a given level (regardless of how many times it has given
-  up the CPU), it moves down one queue.
-
-* Tasks *within* the same queue should be scheduled using round-robin, with the following addendum:
-  process priorities *must* be respected.
-
-        - Thus, *all* tasks with a higher priority (e.g., ``SYSTEM``) should be scheduled before
-          *any* lower priority tasks (e.g., ``BATCH``) **in the same queue**.
-
-        - This is the only place process priorities matter in this algorithm. 
-
-*Implementation Hint*: 
-
-- You should use an array of priorities queues
-
-- Doing the Priority algorithm before MLFQ would be helpful for understanding priority queues.
-2. Round Robin (RR)
+3. Round Robin (RR)
 ~~~~~~~~~~~~~~~~~~~
+
 * Tasks are scheduled in the order they are added to the ready queue
 
 * Tasks may be preempted if their CPU burst length is greater than the *time slice*
@@ -152,7 +228,8 @@ The simulation is over a computer with the following attributes:
 
 2. All process priorities are treated as equal.
 
-3. Priority
+
+4. Priority
 ~~~~~~~~~~~
 
 * Tasks priorities have the following order:
@@ -185,7 +262,61 @@ The simulation is over a computer with the following attributes:
   for MLFQ.
   
 
+5. Multi-Level Feedback Queues (MLFQ)
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
+...called Feedback in the slides
+
+* There are ``n`` queues, numbered ``0 ... n-1``
+        
+        - For this project, ``n = 10``  
+
+* The priority of a queue is given by: ``n - <queue number>``
+
+        - This means lower numbered queues have higher priority.
+
+        - E.g., queue 0 has priority ``n``, queue 3 has priority ``n - 3``, and so forth
+
+* Tasks in lower-numbered (i.e., higher-priority) queues should be scheduled before higher-numbered queues
+
+        - E.g., *all* tasks in queue 0 should be scheduled before *any* in queue 1, etc.
+
+* When a task enters the system, it should be placed in the topmost queue (queue ``0``)
+
+.. raw:: pdf
+
+        PageBreak
+
+* The time slice a task is given is based off of its queue number.
+
+        - Tasks in queue 0 have ``|time slice| = 1``
+
+        - Tasks in queue 1 have ``|time slice| = 2``
+
+        - Tasks in queue 2 have ``|time slice| = 4``
+
+        - ...
+
+        - Tasks in queue ``n`` have ``|time slice| = 2^n``
+
+                - Note: This is pseudocode. ``^`` in C++ is a bitwise XOR, you want exponentiation. 
+
+* Once a task uses up its time allotment at a given level (regardless of how many times it has given
+  up the CPU), it moves down one queue.
+
+* Tasks *within* the same queue should be scheduled using round-robin, with the following addendum:
+  process priorities *must* be respected.
+
+        - Thus, *all* tasks with a higher priority (e.g., ``SYSTEM``) should be scheduled before
+          *any* lower priority tasks (e.g., ``BATCH``) **in the same queue**.
+
+        - This is the only place process priorities matter in this algorithm. 
+
+*Implementation Hint*: 
+
+- You should use an array of priorities queues
+
+- Doing the Priority algorithm before MLFQ would be helpful for understanding priority queues.
 
 
 3.3) Required Logging

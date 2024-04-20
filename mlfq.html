@@ -1,0 +1,932 @@
+Here are code files in the codebase you will utilize for this project:
+<thread.hpp>
+#ifndef THREAD_HPP
+#define THREAD_HPP
+
+#include <iostream>
+#include <memory>
+#include <queue>
+#include <vector>
+
+#include "types/burst/burst.hpp"
+#include "types/enums.hpp"
+
+/*
+    Thread:
+        A class representing a single thread. It contains all the information
+        a thread needs, as well as the functionality that it needs. Anything
+        that you may need to do on a thread should be done here. If there is
+        something you feel is missing, please add it!
+*/
+
+class Thread {
+   public:
+    /*
+        Thread(arrival, thread_id, process_id, priority):
+            A constuctor for a thread object. We give it an arrival time, thread ID,
+            process ID, and priority, and a thread with those variables is constructed.
+    */
+    Thread(int arrival, int thread_id, int process_id, ProcessPriority priority) : thread_id(thread_id), process_id(process_id), arrival_time(arrival), priority(priority) {}
+
+    //==================================================
+    //  Member variables
+    //==================================================
+
+    /*
+        thread_id:
+            The thread's ID. These are only unique within the context of a process.
+    */
+    int thread_id = -1;
+
+    /*
+        process_id:
+            The ID for the thread's parent process. Each thread has a parent!
+    */
+    int process_id = -1;
+
+    /*
+        arrival_time:
+            When the thread arrived into the simulation. Taken from the input file.
+    */
+    int arrival_time = -1;
+
+    /*
+        start_time:
+            The time the CPU was first able to execute this thread. Should be set when
+            the thread transitions from NEW to RUNNING.
+    */
+    int start_time = -1;
+
+    /*
+        end_time:
+            The time that all of this thread's CPU and IO bursts were completed.
+            Set when the thread transitions from RUNNING to EXIT.
+    */
+    int end_time = -1;
+
+    /*
+        service_time:
+            The service time for the thread. The total time it was spent on the CPU.
+    */
+    int service_time = 0;
+
+    /*
+        io_time:
+            The IO time for the thread. The total time it spent in IO.
+    */
+    int io_time = 0;
+
+    /*
+        state_change_time:
+            The time of the last state change.
+    */
+    int state_change_time = -1;
+
+    /*
+        priority:
+            The priority of the parent process (and thus the priority of the thread).
+    */
+    ProcessPriority priority;
+
+    /*
+        current_state:
+            The current state of the thread. All threads start as NEW.
+    */
+    ThreadState current_state = NEW;
+
+    /*
+        previous_state:
+            The previous state of the thread.
+    */
+    ThreadState previous_state;
+
+    /*
+        bursts:
+            A queue of bursts. Should contain the CPU and IO bursts in the correct order as
+            specified in the simulation file.
+    */
+    std::queue<std::shared_ptr<Burst>> bursts;
+
+    // TODO: Add any other variables you may find useful to have, especially for the MLFQ and CFS algorithms!
+    int time_added_to_queue = 0;
+    //==================================================
+    //  Member functions
+    //==================================================
+
+    /*
+        set_*:
+            Sets the thread to the appropriate state at the appropriate time. The time is
+            used to set the state_change_time value. We should perform some sort of checking
+            to make sure that the transition is valid, e.g., is NEW->BLOCKED a valid transition?
+            Throwing an exception for an invalid transition may be a good idea.
+    */
+    void set_ready(int time);
+
+    void set_running(int time);
+
+    void set_blocked(int time);
+
+    void set_finished(int time);
+
+    void set_state(ThreadState state, int time);
+
+    /*
+        response_time():
+            Calculate the response time for this particular thread.
+    */
+    int response_time() const;
+
+    /*
+        turnaround_time():
+            Calculate the turnaround time for this particular thread.
+    */
+    int turnaround_time() const;
+
+    /*
+        get_next_burst(type):
+            Get the next burst. We should ensure that the next burst in the queue
+            is of the appropriate type.
+    */
+    std::shared_ptr<Burst> get_next_burst(BurstType type);
+
+    /*
+        pop_next_burst(type):
+            Pop the next burst. We should ensure that the next burst in the queue
+            is of the appropriate type.
+    */
+    std::shared_ptr<Burst> pop_next_burst(BurstType type);
+};
+
+#endif
+</thread.hpp>
+<thread.cpp>
+    #include <cassert>
+        #include <cstddef>
+        #include <stdexcept>
+        #include "types/thread/thread.hpp"
+        
+        void Thread::set_ready(int time) {
+            switch (this->current_state)
+            {
+                case NEW:
+                    break;
+                case RUNNING:
+                    this->service_time += time - this->state_change_time;
+                    break;
+                case BLOCKED:
+                    this->io_time += time - this->state_change_time;
+                    break;
+                default:
+                    throw "Invalid transition to READY state.";
+                    break;
+            }
+        
+            this->state_change_time = time;
+            this->previous_state = this->current_state;
+            this->current_state = READY;
+        }
+        
+        void Thread::set_running(int time) {
+            if (current_state == READY) {
+                if (previous_state == NEW)
+                        this->start_time = time;
+        
+                this->previous_state = this->current_state;
+                this->current_state = RUNNING;
+                this->state_change_time = time;
+            } else {
+                throw "Invalid transition to RUNNING state.";
+            }  
+        }
+        
+        void Thread::set_blocked(int time) {
+            if (current_state == RUNNING) {
+                this->service_time += time - this->state_change_time;
+                previous_state = current_state;
+                current_state = BLOCKED;
+                state_change_time = time;
+            } else {
+                throw "Invalid transition to BLOCKED state.";
+            } 
+        }
+        
+        void Thread::set_finished(int time) {
+            switch (this->current_state) {
+                case RUNNING:
+                    this->service_time += time - this->state_change_time;
+                    this->state_change_time = time;
+                    this->end_time = time;
+                    this->previous_state = this->current_state;
+                    this->current_state = EXIT;
+                    break;
+                default:
+                     throw "Invalid transition to EXIT state.";
+                     break;
+            } 
+        }
+        
+        int Thread::response_time() const {
+            return start_time - arrival_time;
+        }
+        
+        int Thread::turnaround_time() const {
+            return end_time - arrival_time;
+        }
+        
+        void Thread::set_state(ThreadState state, int time) {
+            switch (state)
+            {
+            case READY:
+                set_ready(time);
+                break;
+            case RUNNING:
+                set_running(time);
+                break;
+            case BLOCKED:
+                set_blocked(time);
+                break;
+            case EXIT:
+                set_finished(time);
+                break;
+            default:
+                break;
+            }
+        }
+        
+        std::shared_ptr<Burst> Thread::get_next_burst(BurstType type) {
+            if (bursts.empty()) return nullptr;
+        
+            auto burst = bursts.front();
+            if (burst->burst_type == type) {
+                return burst;   
+            } else {
+                throw std::logic_error("Current burst is not of expected type.");
+            }
+        }
+        
+        std::shared_ptr<Burst> Thread::pop_next_burst(BurstType type) {
+            auto burst = bursts.front();
+            if (burst->burst_type == type) {
+                bursts.pop();  
+            } else {
+                throw std::logic_error("Current burst is not of expected type.");
+            }
+            return nullptr;
+        }
+        
+</thread.cpp>
+<process.hpp>
+    #ifndef PROCESS_HPP
+    #define PROCESS_HPP
+    
+    #include <memory>
+    #include <vector>
+    
+    #include "types/enums.hpp"
+    #include "types/thread/thread.hpp"
+    
+    /*
+        Process:
+            A simple class representing a process. It contains all the
+            information a process needs, but you can add more if you think
+            it is necessary.
+    */
+    
+    class Process {
+    public:
+        //==================================================
+        //  Member variables
+        //==================================================
+    
+        /*
+            process_id:
+                The process's ID. These are unique, and each process is assigned
+                one in the simulation file.
+        */
+        int process_id;
+    
+        /*
+            priority:
+                The process's priority. Each project is assigned a priority
+                from what is provided in the simulation file.
+        */
+        ProcessPriority priority;
+    
+        /*
+            threads:
+                A vector of the process's threads.
+        */
+        std::vector<std::shared_ptr<Thread>> threads;
+    
+        //==================================================
+        //  Member functions
+        //==================================================
+    
+        /*
+            Process(pid, priority):
+                A constructor for a new process object. We give it a process ID and priority,
+                and a new process with that information is create.
+        */
+        Process(int pid, ProcessPriority priority) : process_id(pid), priority(priority) {}
+    };
+    
+    #endif
+    
+</process.hpp>
+<enums.hpp>
+#ifndef ENUMS_HPP
+#define ENUMS_HPP
+
+/*
+    A set of enumerated types for various things. These are useful
+    because they give us nice names for things like the algorithms
+    or event types, but we can treat them as their own types.
+*/
+
+enum Algorithms {
+    FCFS,
+    RR,
+    PRIORITY,
+    MLFQ
+};
+
+enum BurstType {
+    CPU,
+    IO
+};
+
+enum EventType {
+    THREAD_ARRIVED,
+    THREAD_DISPATCH_COMPLETED,
+    PROCESS_DISPATCH_COMPLETED,
+    CPU_BURST_COMPLETED,
+    IO_BURST_COMPLETED,
+    THREAD_COMPLETED,
+    THREAD_PREEMPTED,
+    DISPATCHER_INVOKED
+};
+
+enum ThreadState {
+    NEW,
+    READY,
+    RUNNING,
+    BLOCKED,
+    EXIT
+};
+
+enum ProcessPriority {
+    SYSTEM,
+    INTERACTIVE,
+    NORMAL,
+    BATCH
+};
+
+// Read the documentation on enumerated types in C++ if you are confused as to the purpose
+// of these maps.
+// Hint: it's to help with not having *lots* of duplicate when printing
+inline const char* STATE_MAP[5] = {
+    "NEW",
+    "READY",
+    "RUNNING",
+    "BLOCKED",
+    "EXIT"
+};
+
+inline const char* EVENT_MAP[8] = {
+    "THREAD_ARRIVED",
+    "THREAD_DISPATCH_COMPLETED",
+    "PROCESS_DISPATCH_COMPLETED",
+    "CPU_BURST_COMPLETED",
+    "IO_BURST_COMPLETED",
+    "THREAD_COMPLETED",
+    "THREAD_PREEMPTED",
+    "DISPATCHER_INVOKED"
+};
+
+inline const char* PROCESS_PRIORITY_MAP[4] = {
+    "SYSTEM",
+    "INTERACTIVE",
+    "NORMAL",
+    "BATCH"
+};
+
+#endif
+</enums.hpp>
+<stable_priority_queue.hpp>
+    /**
+    * C++'s priority_queue is *NOT* stable' i.e., elements with the same priority are *not* retrieved
+    * in a FIFO manner (in fact, it's "undefined" in which order they will be returned).
+    *
+    * Why does C++'s STL do this? Because the STL sucks. It's that simple.
+    *
+    * So props to David Baumann for designing this open source solution so I don't have to.
+    */
+   
+   #ifndef STABLE_PRIORITY_QUEUE
+   #define STABLE_PRIORITY_QUEUE
+   
+   #include <exception>
+   #include <map>
+   #include <queue>
+   #include <vector>
+   
+   // Priority Queue that mainains FIFO ordering for elements with the same priority
+   // Everything is defined in-line since this is templated.
+   template <class T>
+   class Stable_Priority_Queue {
+      private:
+       std::map<int, std::queue<T>> mQueues;
+       std::priority_queue<int, std::vector<int>, std::greater<int>> mPriorityQueue;
+   
+      public:
+       Stable_Priority_Queue() {}
+   
+       /**
+        * Is this queue empty? Equivalent to .size() == 0
+        */
+       bool empty() const {
+           return mPriorityQueue.empty();
+       }
+   
+       /**
+        * Returns the number of elements stored
+        */
+       int size() const {
+           return mPriorityQueue.size();
+       }
+   
+       /**
+        * Retrieve the top element
+        */
+       const T& top() {
+           if (mPriorityQueue.empty()) {
+               throw std::runtime_error("Attempted to pop from empty queue!");
+           }
+           return mQueues[mPriorityQueue.top()].front();
+       }
+   
+       /**
+        * Removes the top element
+        */
+       void pop() {
+           mQueues[mPriorityQueue.top()].pop();
+           if (mQueues[mPriorityQueue.top()].empty()) {
+               mQueues.erase(mPriorityQueue.top());
+           }
+           mPriorityQueue.pop();
+       }
+       /**
+        * Returns the number of elements in the queue with a specific ProcessPriority enum assigned.
+        */
+       std::map<ProcessPriority, int> count() const {
+           std::map<ProcessPriority, int> countMap;
+           for (const auto& queue : mQueues) {
+               ProcessPriority priority = static_cast<ProcessPriority>(queue.first);
+               countMap[priority] += queue.second.size();
+           }
+           return countMap;
+       }
+       /**
+        * Adds an item into the queue.
+        */
+       void push(int priority, const T& item) {
+           mPriorityQueue.push(priority);
+           auto theQueue = mQueues.find(priority);
+           if (theQueue == mQueues.end()) {
+               // queue for this priority does not exist yet, so make one
+               mQueues.insert({priority, std::queue<T>()});
+           }
+           mQueues[priority].push(item);
+       }
+   
+       /**
+        * Overload for assignment operator for deep-copying
+        */
+       Stable_Priority_Queue<T>& operator=(const Stable_Priority_Queue<T>& other) {
+           // Guard self assignment
+           if (this == &other)
+               return *this;
+   
+           // Use the operator= already defined
+           this->mQueues = other.mQueues;
+           this->mPriorityQueue = other.mPriorityQueue;
+   
+           return *this;
+       }
+   };
+   
+   #endif  // STABLE_PRIORITY_QUEUE
+   
+</stable_priority_queue.hpp>
+Act as an expert C++ developer creating a CPU Simulation program for testing different scheduling algorithms. All questions will be about writing code to complete the project, debugging, explanations. You will be implementing the Multi-Level Feedback Queues (MLFQ) algorithm.
+Read and analyze the provided .cpp and .hpp files to understand the codebase of the project and code you will utilize. Analyze them all closely:
+stable_priority_queue.hpp
+enums.hpp
+process.hpp
+thread.hpp
+thread.cpp
+Here is the README with detailed instructions:
+<README instructions>
+1) Introduction
+===============
+The goal of this project is to implement many of the scheduling algorithms discussed in class in a discrete-event 
+simulator. Additionally, at the end of execution, your program will calculate and display several
+performance criteria from the simulation.
+
+Since this is a large project, you are given a **LOT** of starter code, which implements the simulation for you and nicely sets up what you are required to implement.
+
+2) Project Requirements
+=======================
+You will create a program called ``cpu-sim``, which simulates a variety of possibly multi-threaded processes
+using a specified scheduling algorithm. For instance::
+
+        prompt> ./cpu-sim -a MLFQ tests/input/input-1 
+
+...would simulate the processes given in ``tests/input/input-1`` using the MLFQ scheduling algorithm.
+See **the Appendix** for the full list of options. Note that the starter code parses these for you.
+
+3) Various Project Specifications
+=================================
+
+The following sections contain all the information you need to complete this project. 
+
+- If you have a question about what to do, you can likely find it in this (massive) section
+
+3.1) Simulation Information
+---------------------------
+(This is implemented for you in the starter code)
+The simulation is over a computer with the following attributes:
+1. There is a single CPU, so only one task can be running at a time.
+2. There are an infinite number of I/O devices, so any number of processes can be blocked on I/O at the same time.
+3. Processes consist of one or more kernel-level threads (KLTs).
+4. Tasks can exist in one of five states: NEW, READY, RUNNING, BLOCKED, EXIT
+        - NEW
+        - READY
+        - RUNNING
+        - BLOCKED
+        - EXIT
+5. Scheduling tasks requires a non-zero amount of OS overhead:
+        - If the previously executed thread belongs to a different process than the new thread, a
+          full *process switch* occurs. This is also the case for the first thread being executed.
+        - If the previously executed thread belongs to the same process as the new thread being dispatched,
+          a cheaper *thread switch* is done.
+                - A full process switch includes any work required by a thread switch.
+        - Running the scheduler (dispatcher) also requires a certain amount of overhead.
+6) Threads, processes, and dispatch overhead are specified via the input file
+7) Each thread requires a sequence of CPU and I/O bursts of varying lengths as specified by the input file.
+        - You can think of "bursts" as an observation of the task's behavior: a task wanting needing to use
+          the CPU for 10 ms, then read a file (which takes 500 ms), then use the CPU for another 10 ms;
+          would be composed of 3 bursts:
+                a. A CPU burst of 10 ms
+                b. An IO burst of 500 ms
+                c. A CPU burst of 10 ms
+        - Note that all tasks will end with a CPU burst.
+8) Processes have an associated priority, specified as part of the file. Each thread in a process has the same priority as its parent process.
+        - 0: SYSTEM (highest priority)
+        - 1: INTERACTIVE
+        - 2: NORMAL
+        - 3: BATCH (lowest priority)
+
+9) All processes have a distinct process ID, specified as part of the file. Thread IDs are unique only within the context of their owning process (so the first thread in every process has an ID of 0).
+
+10) Overhead is incurred only when dispatching a thread (transitioning it from READY to RUNNING); all other OS actions require zero OS overhead. For example, adding a thread to a ready queue or initiating I/O are both ”free”.
+
+11) Threads for a given process can arrive at any time, even if some other process is currently running (i.e., some external entity—not the CPU—is responsible for creating threads).
+
+12) Tasks are executed on the CPU. For our purposes, a task is either:
+       a. A single-threaded process
+       b. A single thread of a multi-threaded process.
+          - Note this means a "task" is synonymous with a "thread" in this project,
+            since we do not care about kernel workers.
+            Thus, the two are used interchangably throughout this writeup.
+            
+3.2) Scheduling Algorithms
+--------------------------
+1. Multi-Level Feedback Queues (MLFQ)
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+* There are ``n`` queues, numbered ``0 ... n-1``     
+        - For this project, ``n = 10``  
+
+* The priority of a queue is given by: ``n - <queue number>``
+        - This means lower numbered queues have higher priority.
+        - E.g., queue 0 has priority ``n``, queue 3 has priority ``n - 3``, and so forth
+
+* Tasks in lower-numbered (i.e., higher-priority) queues should be scheduled before higher-numbered queues
+    - E.g., *all* tasks in queue 0 should be scheduled before *any* in queue 1, etc.
+
+* When a task enters the system, it should be placed in the topmost queue (queue ``0``)
+
+* The time slice a task is given is based off of its queue number.
+        - Tasks in queue 0 have ``|time slice| = 1``
+        - Tasks in queue 1 have ``|time slice| = 2``
+        - Tasks in queue 2 have ``|time slice| = 4``
+        - ...
+        - Tasks in queue ``n`` have ``|time slice| = 2^n``
+
+* Once a task uses up its time allotment at a given level (regardless of how many times it has given
+  up the CPU), it moves down one queue.
+* Tasks *within* the same queue should be scheduled using round-robin, with the following addendum:
+  process priorities *must* be respected.
+        - Thus, *all* tasks with a higher priority (e.g., ``SYSTEM``) should be scheduled before
+          *any* lower priority tasks (e.g., ``BATCH``) **in the same queue**.
+        - This is the only place process priorities matter in this algorithm. 
+
+*Implementation Hint*: 
+- You should use an array of priorities queues
+- Doing the Priority algorithm before MLFQ would be helpful for understanding priority queues.
+
+2. Priority
+~~~~~~~~~~~
+* Tasks priorities have the following order:
+        a. ``SYSTEM`` (highest)
+        b. ``INTERACTIVE``
+        c. ``NORMAL``
+        d. ``BATCH``  (lowest)
+* Tasks *of the same priority* are scheduled in the order they are added to the ready queue
+
+* Tasks *of different* priorities should follow the order given above (i.e., *all* ``SYSTEM`` 
+  tasks in the ready queue should be executed before *ANY* ``INTERACTIVE`` tasks, and so forth)
+
+* Tasks run until their CPU burst is completed.
+...which implies:
+1. There is no preemption in this algorithm 
+2. Process priorities are NOT to be ignored.
+
+* Implementation Hint: Use Stable_Priority_Queue in stable_priority_queue.hpp instead of the STL priority queue
+
+3. Round Robin (RR)
+~~~~~~~~~~~~~~~~~~~
+* Tasks are scheduled in the order they are added to the ready queue
+* Tasks may be preempted if their CPU burst length is greater than the *time slice*
+* In the event of a preemption:
+        a. The task is removed from the CPU
+        b. Its CPU burst length is updated to reflect the fact that it got some CPU time (how much?)
+        c. The task is added to the back of the ready queue.
+...which implies:
+1. There **IS** preemption in this algorithm.
+2. All process priorities are treated as equal.
+4. Priority
+~~~~~~~~~~~
+* Tasks priorities have the following order:
+        a. ``SYSTEM`` (highest)
+        b. ``INTERACTIVE``
+        c. ``NORMAL``
+        d. ``BATCH``  (lowest)
+* Tasks *of the same priority* are scheduled in the order they are added to the ready queue
+* Tasks *of different* priorities should follow the order given above (i.e., *all* ``SYSTEM`` 
+  tasks in the ready queue should be executed before *ANY* ``INTERACTIVE`` tasks, and so forth)
+* Tasks run until their CPU burst is completed.
+...which implies:
+1. There is no preemption in this algorithm 
+2. Process priorities are NOT to be ignored.
+*Implementation Hint:*
+- ...As mentioned before, the standard library priority queue is not deterministic when multiple entries share the same priority.
+  We highly recommend using the provided stable_priority_queue in ``src/utilities/stable_priority_queue`` as it will also be useful
+  for MLFQ.
+
+3.3) Required Logging
+---------------------
+
+To aid in debugging (and grading!), you are **required** to log certain pieces of information
+about your algorithm. Specifically, you **must** fill the ``SchedulingDecision::explanation`` field
+with one of the following messages, based on the algorithm:
+
+1. For **ALL** algorithms, if the ready queue is empty when the ``get_next_thread()`` function is called,
+   the explanation must be::
+
+        No threads available for scheduling.
+
+2. If the ready queue is *not* empty (thus a thread was selected for scheduling), the explanation differs
+   based on the algorithm:
+        - MLFQ: Selected from queue Z (priority = P, runtime = R). Will run for at most Y ticks. 
+
+        - RR: Selected from X threads. Will run for at most Y ticks.          
+
+* ``X`` is the *total* number of ``Ready`` threads
+* ``Y`` is the length of the time slice
+* ``Z`` is the MLFQ queue *number*
+* ``R`` is the amount of CPU time the task has accumulated *while in the current MLFQ queue*
+* ``P`` is the *process* priority.
+Lastly, you may find ``utilities/fmt/`` to be useful in making these messages.
+</README instructions>
+Here is an example of the Priority Queue implementation for this project for you to get a better understanding of the code you need to write for the MLFQ queue:
+<priority_algorithm.hpp>
+#ifndef PRIORITY_ALGORITHM_HPP
+#define PRIORITY_ALGORITHM_HPP
+
+#include <memory>
+#include <queue>
+#include <string>
+#include <vector>
+
+#include "algorithms/fcfs/fcfs_algorithm.hpp"
+#include "algorithms/scheduling_algorithm.hpp"
+#include "utilities/stable_priority_queue/stable_priority_queue.hpp"
+
+/*
+    PRIORITYScheduler:
+        A representation of a priority scheduling algorithm.
+
+        This is a derived class from the base scheduling algorithm class.
+
+        You are free to add any member functions or member variables that you
+        feel are helpful for implementing the algorithm.
+*/
+
+// "typedef" this type
+using PriorityQueue = Stable_Priority_Queue<std::shared_ptr<Thread>>;
+
+class PRIORITYScheduler : public Scheduler {
+   private:
+    //==================================================
+    //  Member variables
+    //==================================================
+
+    // TODO: Add any member variables you may need
+    Stable_Priority_Queue<std::shared_ptr<Thread>> ready_queue;
+
+   public:
+    //==================================================
+    //  Member functions
+    //==================================================
+
+    PRIORITYScheduler(int slice = -1);
+
+    std::shared_ptr<SchedulingDecision> get_next_thread();
+
+    void add_to_ready_queue(std::shared_ptr<Thread> thread);
+
+    size_t size() const;
+};
+
+#endif
+</priority_algorithm.hpp>
+#include "algorithms/priority/priority_algorithm.hpp"
+
+#include <cassert>
+#include <stdexcept>
+
+#define FMT_HEADER_ONLY
+#include "utilities/fmt/format.h"
+
+/*
+    Here is where you should define the logic for the priority algorithm.
+*/
+
+PRIORITYScheduler::PRIORITYScheduler(int slice) {
+    if (slice != -1) {
+        throw("PRIORITY must have a timeslice of -1");
+    }
+    // if (slice == -1) {
+    //     time_slice = 3;
+    //     // throw("RR requires a slice greater than 0");
+    // } else {
+    //     this->time_slice = slice;
+    // }
+}
+
+std::shared_ptr<SchedulingDecision> PRIORITYScheduler::get_next_thread() {
+    auto decision = std::make_shared<SchedulingDecision>();
+    if (ready_queue.empty()) {
+        decision->time_slice = -1;
+        decision->thread = nullptr;
+        decision->explanation = "No threads available for scheduling.";
+    } else {
+        std::shared_ptr<Thread> next = ready_queue.top();
+        auto before_counts = ready_queue.count();
+        ready_queue.pop();
+        auto after_counts = ready_queue.count();
+        decision->thread = next;
+        // [S: u I: u N: u B: u] -> [S: v I: v N: v B: v]. Will run to completion of burst.
+        decision->explanation = fmt::format("[S: {} I: {} N: {} B: {}] -> [S: {} I: {} N: {} B: {}]. Will run to completion of burst.", before_counts[ProcessPriority::SYSTEM], before_counts[ProcessPriority::INTERACTIVE], before_counts[ProcessPriority::NORMAL], before_counts[ProcessPriority::BATCH], after_counts[ProcessPriority::SYSTEM], after_counts[ProcessPriority::INTERACTIVE], after_counts[ProcessPriority::NORMAL], after_counts[ProcessPriority::BATCH]);
+    }
+    return decision;
+}
+
+void PRIORITYScheduler::add_to_ready_queue(std::shared_ptr<Thread> thread) {
+    ready_queue.push(thread->priority, thread);
+}
+
+size_t PRIORITYScheduler::size() const {
+    return ready_queue.size();
+}
+
+<priority_algorithm.cpp>
+</priority_algorithm.cpp>
+The MLFQ algorithm must use Stable_Priority_Queue defined in the stable_priority_queue.hpp file provided.
+My MLFQ code doesn't produce expected results, one of which is that time_slice is always 1. Your job is to troubleshoot and find the error so that it functions as expected for the instructions and requirements given. Below is the code for mlfq_algorithm.cpp and mlfq_algorithm.hpp
+<mlfq_algorithm.hpp>
+#ifndef MFLQ_ALGORITHM_HPP
+#define MFLQ_ALGORITHM_HPP
+
+#include <map>
+#include <memory>
+
+#include "algorithms/scheduling_algorithm.hpp"
+#include "utilities/stable_priority_queue/stable_priority_queue.hpp"
+
+/*
+    MLFQScheduler:
+        A representation of a multi-level feedback queue scheduling algorithm.
+
+        You are free to add any member functions or member variables that you
+        feel are helpful for implementing the algorithm.
+*/
+
+using MLFQQueue = Stable_Priority_Queue<std::shared_ptr<Thread>>;
+
+class MLFQScheduler : public Scheduler {
+   public:
+    //==================================================
+    //  Member variables
+    //==================================================
+
+    // TODO: Add any member variables you may need.
+    int n = 10;
+    std::vector<Stable_Priority_Queue<std::shared_ptr<Thread>>> queues;
+
+    //==================================================
+    //  Member functions
+    //==================================================
+
+    MLFQScheduler(int slice = -1);
+
+    std::shared_ptr<SchedulingDecision> get_next_thread();
+
+    void add_to_ready_queue(std::shared_ptr<Thread> thread);
+
+    size_t size() const;
+};
+
+#endif
+</mlfq_algorithm.hpp>
+<mlfq_algorithm.cpp>
+#include "algorithms/mlfq/mlfq_algorithm.hpp"
+
+#include <cassert>
+#include <stdexcept>
+
+#define FMT_HEADER_ONLY
+#include "utilities/fmt/format.h"
+
+/*
+    Here is where you should define the logic for the MLFQ algorithm.
+*/
+
+MLFQScheduler::MLFQScheduler(int slice) {
+    if (slice != -1) {
+        throw("MLFQ does NOT take a customizable time slice");
+    }
+    queues = std::vector<Stable_Priority_Queue<std::shared_ptr<Thread>>>(n);
+}
+
+std::shared_ptr<SchedulingDecision> MLFQScheduler::get_next_thread() {
+    auto decision = std::make_shared<SchedulingDecision>();
+
+    if (queues.empty()) {
+        decision->time_slice = -1;
+        decision->thread = nullptr;
+        decision->explanation = "No threads available for scheduling.";
+        // return decision;
+    } else {
+        for (int i = 0; i < n; i++) {
+            if (!queues[i].empty()) {
+                auto thread = queues[i].top();
+                queues[i].pop();
+                std::cout << "Time Slice: " << pow(2, i) << std::endl;
+                if (thread->service_time - thread->time_added_to_queue >= pow(2, i)) {
+                    // If so, move it down one queue if it's not already in the lowest priority queue
+                    if (i < n - 1) {
+                        thread->time_added_to_queue = thread->service_time;
+                        queues[i + 1].push(thread->priority, thread);
+                        continue;
+                    }
+                } else {
+                    decision->thread = thread;
+                    decision->time_slice = pow(2, i);
+                    // Selected from queue Z (priority = P, runtime = R). Will run for at most Y ticks.
+                    decision->explanation = fmt::format("Selected from queue {} (priority = {}, runtime = {}). Will run for at most {} ticks.", i, PROCESS_PRIORITY_MAP[thread->priority], thread->service_time - thread->time_added_to_queue, decision->time_slice);
+                }
+
+                return decision;
+            }
+        }
+    }
+    return decision;
+}
+
+void MLFQScheduler::add_to_ready_queue(std::shared_ptr<Thread> thread) {
+    thread->time_added_to_queue = thread->service_time;
+    queues[0].push(thread->priority, thread);
+    // queues[thread->priority].push(thread->priority, thread);
+}
+
+size_t MLFQScheduler::size() const {
+    size_t total = 0;
+    for (const auto& queue : queues) {
+        total += queue.size();
+    }
+    return total;
+}
+</mlfq_algorithm.cpp>
+Use the provided codebase, instructions, and requirements for the project to fix the MLFQ Scheduler Algorithm

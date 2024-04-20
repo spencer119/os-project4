@@ -30,8 +30,8 @@ std::shared_ptr<SchedulingDecision> MLFQScheduler::get_next_thread() {
             if (!queues[i].empty()) {
                 auto thread = queues[i].top();
                 queues[i].pop();
-                std::cout << "Time Slice: " << pow(2, i) << std::endl;
-                if (thread->service_time - thread->time_added_to_queue >= pow(2, i)) {
+                int current_slice = pow(2, i);
+                if (thread->service_time - thread->time_added_to_queue >= current_slice) {
                     // If so, move it down one queue if it's not already in the lowest priority queue
                     if (i < n - 1) {
                         thread->time_added_to_queue = thread->service_time;

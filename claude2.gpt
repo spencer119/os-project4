@@ -1,0 +1,8 @@
+Here is my code for the MLFQ i need to troubleshoot:
+<mlfq_algorithm.hpp>
+
+</mlfq_algorithm.hpp>
+<mlfq_algorithm.cpp>
+</mlfq_algorithm.cpp>
+I wrote this code for mlfq_algorithm.cpp and mlfq_algorithm.hpp to implement MLFQ but it isnt functioning correctly. It
+does not manipulate the threads correctly. Using the instructions and relevant codebase, fix my code.
