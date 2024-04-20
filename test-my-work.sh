@@ -1,8 +1,8 @@
 #!/bin/bash
 #Switch these for loops (commented and uncommented) to enable CFS testing
+# for alg in mlfq #fcfs spn rr rr-s6 priority
 #for alg in fcfs spn rr rr-s6 priority mlfq cfs cfs-s6
-# for alg in fcfs spn rr rr-s6 priority mlfq
-for alg in mlfq #fcfs spn rr rr-s6 priority
+for alg in mlfq # fcfs spn rr rr-s6 priority
 do
 	for i in 1 2 3 4 5
 	do

@@ -185,7 +185,60 @@ The simulation is over a computer with the following attributes:
   for MLFQ.
   
 
+5. Multi-Level Feedback Queues (MLFQ)
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+...called Feedback in the slides
 
+* There are ``n`` queues, numbered ``0 ... n-1``
+        
+        - For this project, ``n = 10``  
+
+* The priority of a queue is given by: ``n - <queue number>``
+
+        - This means lower numbered queues have higher priority.
+
+        - E.g., queue 0 has priority ``n``, queue 3 has priority ``n - 3``, and so forth
+
+* Tasks in lower-numbered (i.e., higher-priority) queues should be scheduled before higher-numbered queues
+
+        - E.g., *all* tasks in queue 0 should be scheduled before *any* in queue 1, etc.
+
+* When a task enters the system, it should be placed in the topmost queue (queue ``0``)
+
+.. raw:: pdf
+
+        PageBreak
+
+* The time slice a task is given is based off of its queue number.
+
+        - Tasks in queue 0 have ``|time slice| = 1``
+
+        - Tasks in queue 1 have ``|time slice| = 2``
+
+        - Tasks in queue 2 have ``|time slice| = 4``
+
+        - ...
+
+        - Tasks in queue ``n`` have ``|time slice| = 2^n``
+
+                - Note: This is pseudocode. ``^`` in C++ is a bitwise XOR, you want exponentiation. 
+
+* Once a task uses up its time allotment at a given level (regardless of how many times it has given
+  up the CPU), it moves down one queue.
+
+* Tasks *within* the same queue should be scheduled using round-robin, with the following addendum:
+  process priorities *must* be respected.
+
+        - Thus, *all* tasks with a higher priority (e.g., ``SYSTEM``) should be scheduled before
+          *any* lower priority tasks (e.g., ``BATCH``) **in the same queue**.
+
+        - This is the only place process priorities matter in this algorithm. 
+
+*Implementation Hint*: 
+
+- You should use an array of priorities queues
+
+- Doing the Priority algorithm before MLFQ would be helpful for understanding priority queues.
 
 
 3.3) Required Logging

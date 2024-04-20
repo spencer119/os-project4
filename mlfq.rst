@@ -1,3 +1,4 @@
+I need to trouble shoot the functionality of my MLFQ scheduler in a C++ CPU Simulation program for testing different scheduling algorithms. It doesn't produce the expected output for my Multi-Level Feedback Queues (MLFQ) code. Read these instructions carefully to understand the requirements of the project better: 
 <instructions>
 1) Introduction
 ===============
@@ -99,24 +100,6 @@ b. A single thread of a multi-threaded process.
 1. There **IS** preemption in this algorithm.
 2. All process priorities are treated as equal.
 
-3. Priority
-~~~~~~~~~~~
-* Tasks priorities have the following order:
-    a. SYSTEM (highest)
-    b. INTERACTIVE
-    c. NORMAL
-    d. BATCH  (lowest)
-* Tasks *of the same priority* are scheduled in the order they are added to the ready queue
-* Tasks *of different* priorities should follow the order given above (i.e., *all* SYSTEM 
-  tasks in the ready queue should be executed before *ANY* INTERACTIVE tasks, and so forth)
-* Tasks run until their CPU burst is completed.
-...which implies:
-1. There is no preemption in this algorithm 
-2. Process priorities are NOT to be ignored.
-*Implementation Hint:*
-- ...As mentioned before, the standard library priority queue is not deterministic when multiple entries share the same priority.
-- Use the Stable_Priority_Queue class in stable_priority_queue.hpp (you can find the contents of stable_priority_queue.hpp in project_hpp_files.txt) to ensure that tasks of the same priority are scheduled in the order they were added to the ready queue.
-
 3.3) Required Logging
 ---------------------
 
@@ -152,3 +135,120 @@ You need to calculate the following performance metrics:
 
 See the SystemStatistics class and Simulation::calculate_statistics() for more information.
 </instructions>
+Here is my current code for the MLFQ algorithm that isn't working correctly, mlfq_algorithm.cpp and mlfq_algorithm.hpp:
+<mlfq_algorithm.hpp>
+#ifndef MFLQ_ALGORITHM_HPP
+#define MFLQ_ALGORITHM_HPP
+
+#include <map>
+#include <memory>
+
+#include "algorithms/scheduling_algorithm.hpp"
+#include "utilities/stable_priority_queue/stable_priority_queue.hpp"
+
+/*
+    MLFQScheduler:
+        A representation of a multi-level feedback queue scheduling algorithm.
+
+        You are free to add any member functions or member variables that you
+        feel are helpful for implementing the algorithm.
+*/
+
+using MLFQQueue = Stable_Priority_Queue<std::shared_ptr<Thread>>;
+
+class MLFQScheduler : public Scheduler {
+   public:
+    //==================================================
+    //  Member variables
+    //==================================================
+
+    // TODO: Add any member variables you may need.
+    int n = 10;
+    std::vector<Stable_Priority_Queue<std::shared_ptr<Thread>>> queues;
+
+    //==================================================
+    //  Member functions
+    //==================================================
+
+    MLFQScheduler(int slice = -1);
+
+    std::shared_ptr<SchedulingDecision> get_next_thread();
+
+    void add_to_ready_queue(std::shared_ptr<Thread> thread);
+
+    size_t size() const;
+};
+
+#endif
+</mlfq_algorithm.hpp>
+<mlfq_algorithm.cpp>
+#include "algorithms/mlfq/mlfq_algorithm.hpp"
+
+#include <cassert>
+#include <stdexcept>
+
+#define FMT_HEADER_ONLY
+#include "utilities/fmt/format.h"
+
+/*
+    Here is where you should define the logic for the MLFQ algorithm.
+*/
+
+MLFQScheduler::MLFQScheduler(int slice) {
+    if (slice != -1) {
+        throw("MLFQ does NOT take a customizable time slice");
+    }
+    queues.resize(n, Stable_Priority_Queue<std::shared_ptr<Thread>>());
+}
+
+std::shared_ptr<SchedulingDecision> MLFQScheduler::get_next_thread() {
+    auto decision = std::make_shared<SchedulingDecision>();
+
+    if (queues.empty()) {
+        decision->time_slice = -1;
+        decision->thread = nullptr;
+        decision->explanation = "No threads available for scheduling.";
+        // return decision;
+    } else {
+        for (int i = 0; i < n; i++) {
+            if (!queues[i].empty()) {
+                auto thread = queues[i].top();
+                queues[i].pop();
+                if (thread->service_time - thread->time_added_to_queue >= pow(2, i)) {
+                    // If so, move it down one queue if it's not already in the lowest priority queue
+                    if (i < n - 1) {
+                        thread->time_added_to_queue = thread->service_time;
+                        queues[i + 1].push(thread->priority, thread);
+                        continue;
+                    }
+                } else {
+                    decision->thread = thread;
+                    decision->time_slice = pow(2, i);
+                    // Selected from queue Z (priority = P, runtime = R). Will run for at most Y ticks.
+                    decision->explanation = fmt::format("Selected from queue {} (priority = {}, runtime = {}). Will run for at most {} ticks.", i, PROCESS_PRIORITY_MAP[thread->priority], thread->service_time - thread->time_added_to_queue, decision->time_slice);
+                }
+
+                return decision;
+            }
+        }
+    }
+    return decision;
+}
+
+void MLFQScheduler::add_to_ready_queue(std::shared_ptr<Thread> thread) {
+    thread->time_added_to_queue = thread->service_time;
+    queues[0].push(thread->priority, thread);
+    // queues[thread->priority].push(thread->priority, thread);
+}
+
+size_t MLFQScheduler::size() const {
+    size_t total = 0;
+    for (const auto& queue : queues) {
+        total += queue.size();
+    }
+    return total;
+}
+
+</mlfq_algorithm.cpp>
+In addition to all the information provided already, before you write code you must analyze the file codebase.txt which contains the contents of project code files you have to understand and utilize in your code. Read it carefully and re-read it as needed to understand the requirements of the project.
+What in the code is not meeting the requirements of the project causing the output to not match the expected output?
