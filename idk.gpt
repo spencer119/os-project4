@@ -153,6 +153,6 @@ size_t MLFQScheduler::size() const {
 </mlfq_algorithm.cpp>
 Reread all the header file in project_hpp_files.txt that was provided to you. You will need to understand files like thread.hpp and stable_priority_queue.hpp for the MLFQ algorithm. Make sure that time_slice is handled properly and that:
 Tasks *within* the same queue should be scheduled using round-robin, with the following addendum:
- - process priorities *must* be respected.
+- process priorities *must* be respected.
 - Thus, *all* tasks with a higher priority (e.g., ``SYSTEM``) should be scheduled before *any* lower priority tasks (e.g., ``BATCH``) **in the same queue**.
- - This is the only place process priorities matter in this algorithm.
+- This is the only place process priorities matter in this algorithm.
