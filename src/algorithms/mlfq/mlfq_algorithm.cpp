@@ -18,8 +18,13 @@ MLFQScheduler::MLFQScheduler(int slice) {
 
 std::shared_ptr<SchedulingDecision> MLFQScheduler::get_next_thread() {
     auto decision = std::make_shared<SchedulingDecision>();
-
-       return decision;
+    if (queues.empty()) {
+        decision->time_slice = -1;
+        decision->thread = nullptr;
+        decision->explanation = "No threads available for scheduling.";
+        return decision;
+    }
+    return decision;
 }
 // for (int i = 0; i < n; i++) {
 //     if (!queues[i].empty()) {
