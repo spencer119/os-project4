@@ -109,6 +109,8 @@ class Thread {
     // TODO: Add any other variables you may find useful to have, especially for the MLFQ and CFS algorithms!
     int time_added = 0;
     int queue_time = 0;
+    int schedule_time = -1;
+    int last_queue = -1;
     std::unordered_map<int, int> queue_map;
     //==================================================
     //  Member functions

@@ -19,7 +19,13 @@ MLFQScheduler::MLFQScheduler(int slice) {
 }
 
 std::shared_ptr<SchedulingDecision> MLFQScheduler::get_next_thread() {  // TODO
-    auto decision = std::make_shared<SchedulingDecision>();
+    if (this->size() == 0) {
+        auto decision = std::make_shared<SchedulingDecision>();
+        decision->explanation = "No threads available for scheduling.";
+        decision->time_slice = -1;
+        decision->thread = nullptr;
+        return decision;
+    }
     for (int i = 0; i < n;) {
         time_slice = pow(2, i);
         if (queues[i].empty()) {
@@ -34,13 +40,17 @@ std::shared_ptr<SchedulingDecision> MLFQScheduler::get_next_thread() {  // TODO
                 queues[i + 1].push(thread->priority, thread);
                 continue;
             } else {
-                thread->queue_map[i] += current_slice;
+                // thread->queue_map[i] += current_slice;
                 queues[i].pop();
+                thread->schedule_time = thread->service_time;
+                thread->last_queue = i;
                 return create_decision(thread, i);
             }
         } else {
             queues[i].pop();
-            thread->queue_map[i] += current_slice;
+            thread->schedule_time = thread->service_time;
+            thread->last_queue = i;
+            // thread->queue_map[i] += current_slice;
             return create_decision(thread, i);
         }
     }
@@ -48,6 +58,12 @@ std::shared_ptr<SchedulingDecision> MLFQScheduler::get_next_thread() {  // TODO
 }
 void MLFQScheduler::add_to_ready_queue(std::shared_ptr<Thread> thread) {  // TODO
     thread->time_added = thread->service_time;
+    if (thread->schedule_time == -1) {
+        thread->schedule_time = 0;
+    } else {
+        // std::cout << "Times " << thread->schedule_time << " " << thread->service_time << std::endl;
+        thread->queue_map[thread->last_queue] += thread->service_time - thread->schedule_time;
+    }
     queues[0].push(thread->priority, thread);
 }
 
@@ -66,10 +82,17 @@ int MLFQScheduler::update_thread_queue_time(std::shared_ptr<Thread> thread, int 
     return thread->queue_map[queue_index];
 }
 
-std::shared_ptr<SchedulingDecision> MLFQScheduler::create_decision(std::shared_ptr<Thread> thread, int queue_index) {
+std::shared_ptr<SchedulingDecision> MLFQScheduler::create_decision(std::shared_ptr<Thread> thread = nullptr, int queue_index = -1) {
     auto decision = std::make_shared<SchedulingDecision>();
+    if (thread == nullptr) {
+        decision->explanation = "No threads available for scheduling.";
+        decision->time_slice = -1;
+        decision->thread = nullptr;
+        return decision;
+    }
     decision->thread = thread;
     decision->time_slice = static_cast<int>(pow(2, queue_index));
     decision->explanation = fmt::format("Selected from queue {} (priority = {}, runtime = {}). Will run for at most {} ticks.", queue_index, PROCESS_PRIORITY_MAP[thread->priority], thread->queue_map[queue_index], static_cast<int>(pow(2, queue_index)));
+    // thread->queue_map[queue_index] += static_cast<int>(pow(2, queue_index));
     return decision;
 }
