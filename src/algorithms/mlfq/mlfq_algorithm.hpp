@@ -26,6 +26,8 @@ public:
 
     // TODO: Add any member variables you may need.
 
+    std::vector<MLFQQueue> queues;
+    int n = 10;
     //==================================================
     //  Member functions
     //==================================================
