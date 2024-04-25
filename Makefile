@@ -5,7 +5,7 @@ SHELL := bash
 MAKEFLAGS += --warn-undefined-variables
 MAKEFLAGS += --no-builtin-rules
 
-CPPFLAGS += -Wall -Werror -MMD -MP -Isrc -g -std=c++17 
+CPPFLAGS += -Wall -Werror -MMD -MP -Isrc -g -std=c++17 -Wno-c++20-compat
 
 NAME = cpu-sim
 
