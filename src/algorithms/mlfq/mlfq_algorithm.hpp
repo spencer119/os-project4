@@ -3,6 +3,7 @@
 
 #include <map>
 #include <memory>
+
 #include "algorithms/scheduling_algorithm.hpp"
 #include "utilities/stable_priority_queue/stable_priority_queue.hpp"
 
@@ -14,17 +15,16 @@
         feel are helpful for implementing the algorithm.
 */
 
-
 using MLFQQueue = Stable_Priority_Queue<std::shared_ptr<Thread>>;
 
 class MLFQScheduler : public Scheduler {
-public:
-    
+   public:
     //==================================================
     //  Member variables
     //==================================================
 
     // TODO: Add any member variables you may need.
+    // enum ThreadDecision {}
 
     std::vector<MLFQQueue> queues;
     int n = 10;
@@ -40,6 +40,9 @@ public:
 
     size_t size() const;
 
+    int update_thread_queue_time(std::shared_ptr<Thread> thread, int queue_index);
+
+    std::shared_ptr<SchedulingDecision> create_decision(std::shared_ptr<Thread> thread, int queue_index);
 };
 
 #endif
